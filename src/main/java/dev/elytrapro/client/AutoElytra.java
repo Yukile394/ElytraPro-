@@ -23,7 +23,7 @@ public final class AutoElytra {
         // queued "take off + rocket" from a right click
         AutoFirework.tick(mc);
 
-        if (!cfg.autoElytra) return;
+        if (!cfg.enabled || !cfg.autoElytra) return;
 
         boolean jump = mc.options.jumpKey.isPressed() && mc.currentScreen == null;
         if (!jump) attemptedThisPress = false;

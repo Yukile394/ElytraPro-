@@ -38,6 +38,7 @@ public final class AutoFirework {
         ClientPlayerEntity p = mc.player;
         ElytraProConfig cfg = ElytraProConfig.get();
         if (p == null || mc.world == null || mc.interactionManager == null) return false;
+        if (!cfg.enabled) return false;
         if (p.isSpectator() || p.hasVehicle()) return false;
 
         long now = mc.world.getTime();
@@ -46,7 +47,7 @@ public final class AutoFirework {
 
         // 1) trigger: inside cobweb/planks/logs, OR looking at a placed trigger block
         boolean inside = (cfg.launchInsideCobweb && ElytraUtil.inCobweb(p))
-                || (cfg.launchInsidePlanks && ElytraUtil.insidePhaseBlock(p));
+                || (cfg.launchInsidePlanks && ElytraUtil.insidePlanks(p));
         boolean onTriggerBlock = mc.crosshairTarget instanceof BlockHitResult hit
                 && hit.getType() == HitResult.Type.BLOCK
                 && cfg.isTriggerBlock(mc.world.getBlockState(hit.getBlockPos()));
@@ -109,6 +110,7 @@ public final class AutoFirework {
     /** Called every client tick; finishes a queued take-off. */
     public static void tick(MinecraftClient mc) {
         if (pending <= 0) return;
+        if (!ElytraProConfig.get().enabled) { pending = 0; return; }
         ClientPlayerEntity p = mc.player;
         if (p == null || mc.world == null || mc.interactionManager == null) { pending = 0; return; }
         pending--;

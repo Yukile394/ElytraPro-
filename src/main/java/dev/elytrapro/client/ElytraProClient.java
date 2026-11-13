@@ -13,7 +13,9 @@ public final class ElytraProClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         Stage1.init();
+        MasterToggle.init();
         ClientTickEvents.END_CLIENT_TICK.register(AutoElytra::tick);
         ClientTickEvents.END_CLIENT_TICK.register(Stage1::tick);
+        ClientTickEvents.END_CLIENT_TICK.register(MasterToggle::tick);
     }
 }

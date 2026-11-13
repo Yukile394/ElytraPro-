@@ -39,7 +39,8 @@ public final class Stage1 {
     }
 
     public static boolean isEnabled() {
-        return ElytraProConfig.get().stage1Enabled;
+        ElytraProConfig c = ElytraProConfig.get();
+        return c.enabled && c.stage1Enabled;
     }
 
     /** Client tick: handles the toggle key and the short retry window after a rocket click. */
