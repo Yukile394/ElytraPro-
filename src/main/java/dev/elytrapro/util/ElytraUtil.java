@@ -30,9 +30,9 @@ public final class ElytraUtil {
         return anyCell(p, s -> s.isOf(Blocks.COBWEB));
     }
 
-    /** True if the player's hitbox overlaps a phase block (planks / logs by default). */
-    public static boolean insidePhaseBlock(ClientPlayerEntity p) {
-        return anyCell(p, s -> ElytraProConfig.get().isPhaseBlock(s));
+    /** True if the player's hitbox overlaps an "inside" block (planks / logs by default). */
+    public static boolean insidePlanks(ClientPlayerEntity p) {
+        return anyCell(p, s -> ElytraProConfig.get().isInsideBlock(s));
     }
 
     private static boolean anyCell(ClientPlayerEntity p, Predicate<BlockState> test) {
