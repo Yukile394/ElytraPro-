@@ -25,10 +25,12 @@ public final class ElytraProConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static ElytraProConfig instance;
 
-    private static final int CONFIG_VERSION = 5;
+    private static final int CONFIG_VERSION = 6;
 
     /** Old config files are reset once so the new defaults take effect. */
     public int configVersion; // 0 when missing in an old file
+    /** Master switch (toggled with the ElytraPro on/off key). OFF = everything stays vanilla. */
+    public boolean enabled = true;
     public boolean autoFirework = true;
     public boolean autoElytra = true;
     /** Right click (rocket in hand) on the ground: jump, open wings and fire. */
@@ -51,10 +53,9 @@ public final class ElytraProConfig {
 
     /** Right click while your body is inside planks/logs also launches you (same as cobweb). */
     public boolean launchInsidePlanks = true;
-    /** While gliding, the blocks below are not solid for you: you fly straight through them (client side). */
-    public boolean phaseThroughBlocks = true;
-    public List<String> phaseBlockTags = List.of("minecraft:logs", "minecraft:planks");
-    public List<String> phaseBlocks = List.of();
+    /** Blocks that count as "inside" for launchInsidePlanks (cobweb is handled by launchInsideCobweb). */
+    public List<String> insideBlockTags = List.of("minecraft:logs", "minecraft:planks");
+    public List<String> insideBlocks = List.of();
 
     /** Stage 1 (auto knockback hit while gliding). Toggled with the Stage 1 key. */
     public boolean stage1Enabled = false;
@@ -71,7 +72,7 @@ public final class ElytraProConfig {
     public boolean debug = false;
 
     private transient Matcher triggerMatcher;
-    private transient Matcher phaseMatcher;
+    private transient Matcher insideMatcher;
 
     private static final class Matcher {
         final Set<Block> blocks = new HashSet<>();
@@ -129,8 +130,8 @@ public final class ElytraProConfig {
         cfg.minAirTicks = Math.max(0, cfg.minAirTicks);
         if (cfg.triggerBlockTags == null) cfg.triggerBlockTags = List.of();
         if (cfg.triggerBlocks == null) cfg.triggerBlocks = List.of();
-        if (cfg.phaseBlockTags == null) cfg.phaseBlockTags = List.of();
-        if (cfg.phaseBlocks == null) cfg.phaseBlocks = List.of();
+        if (cfg.insideBlockTags == null) cfg.insideBlockTags = List.of();
+        if (cfg.insideBlocks == null) cfg.insideBlocks = List.of();
         cfg.stage1WaitTicks = Math.max(0, cfg.stage1WaitTicks);
         if (cfg.stage1Range <= 0) cfg.stage1Range = 2.0;
         if (cfg.stage1Angle <= 0) cfg.stage1Angle = 20.0;
@@ -142,9 +143,9 @@ public final class ElytraProConfig {
         return triggerMatcher.test(state);
     }
 
-    public boolean isPhaseBlock(BlockState state) {
-        if (phaseMatcher == null) phaseMatcher = new Matcher(phaseBlocks, phaseBlockTags);
-        return phaseMatcher.test(state);
+    public boolean isInsideBlock(BlockState state) {
+        if (insideMatcher == null) insideMatcher = new Matcher(insideBlocks, insideBlockTags);
+        return insideMatcher.test(state);
     }
 
     public void save() {
