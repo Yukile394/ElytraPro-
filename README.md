@@ -14,9 +14,12 @@ Client-side **Fabric** mod for **Minecraft 1.21 and 1.21.1**. Java 21.
 - Everywhere else space is completely vanilla.
 - The server can still close wings (ground contact, water, anti-cheat). The client cannot override that.
 
-**Planks / logs (v1.7.0)**
-- Right click while your body is inside a cobweb, planks or logs fires the rocket (`launchInsidePlanks`).
-- While gliding, planks/logs are not solid for you (`phaseThroughBlocks`, lists: `phaseBlockTags`, `phaseBlocks`). Client side: the server can still pull you back.
+**Planks / logs**
+- Right click while your body is inside a cobweb, planks or logs fires the rocket (`launchInsidePlanks`; lists: `insideBlockTags`, `insideBlocks`). Right-clicking a placed cobweb/planks/log also works.
+- The old "fly through planks/logs" (phase) feature was REMOVED in 1.8.0: it caused rubber-banding/lag on servers.
+
+**On/off key (v1.8.0)**
+- Key (default `H`, Controls > ElytraPro) switches the whole mod on/off. Saved in `enabled`.
 
 **Stage 1 (v1.7.0)**
 - Key (default `G`, change it in Controls > ElytraPro) toggles it. Saved in `stage1Enabled`.
@@ -33,7 +36,7 @@ Client-side **Fabric** mod for **Minecraft 1.21 and 1.21.1**. Java 21.
 gradle wrapper --gradle-version 8.10.2   # once, creates gradle-wrapper.jar
 ./gradlew build                        # Windows: gradlew.bat build
 ```
-Output: `build/libs/elytrapro-1.7.0.jar`. Requires JDK 21.
+Output: `build/libs/elytrapro-1.8.0.jar`. Requires JDK 21.
 GitHub Actions builds on every push and uploads the JAR as artifact `elytrapro-jar`.
 
 ## Config
