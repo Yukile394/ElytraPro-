@@ -1,0 +1,13 @@
+.gradle/
+build/
+out/
+run/
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+bin/
+*.log
+hs_err_pid*
