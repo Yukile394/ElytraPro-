@@ -14,10 +14,11 @@ Client-side **Fabric** mod for **Minecraft 1.21 and 1.21.1**. Java 21.
 - Everywhere else space is completely vanilla.
 - The server can still close wings (ground contact, water, anti-cheat). The client cannot override that.
 
-**Stage 1 (v1.10.0)**
+**Stage 1 (v1.11.0)**
 - Key `G` (Controls > ElytraPro) toggles it. Saved in `stage1Enabled`.
-- ON + wings open + rocket click: if a player is within `stage1Range` (2 blocks) and inside the `stage1Angle` cone in front of you, and ANY item in your inventory (hotbar or bag) has Knockback: your view turns to him (`stage1TurnView`; false = silent aim), the item is brought into your hand, you hit as a critical and everything is put back, all in one tick. Keeps trying for `stage1WaitTicks` if the swing is not ready. Behind / beside = nothing. Wings closed = nothing.
-- `stage1ReturnSlot` (1-9) is the slot it returns to (0 = the slot you were on). If the rocket is in your selected slot it returns there.
+- ON + a sword in the selected slot + a hit on a living entity: the hit uses the sword's damage and cooldown plus the Knockback enchantment of another item/block in your inventory. The selected slot never changes: the item is swapped into the sword's slot with inventory packets and back in the same tick.
+- It always waits for the sword's full cooldown: an early click is queued for about 0.6 s and fires when the sword is ready and the crosshair is on a target.
+- A sword that already has Knockback is left alone (normal hit).
 
 **Fullbright (v1.9.0)**
 - Client-side night vision, ON by default. Key `H` toggles it (Controls > ElytraPro), saved in `fullbright`.
@@ -31,12 +32,12 @@ Client-side **Fabric** mod for **Minecraft 1.21 and 1.21.1**. Java 21.
 gradle wrapper --gradle-version 8.10.2   # once, creates gradle-wrapper.jar
 ./gradlew build                        # Windows: gradlew.bat build
 ```
-Output: `build/libs/elytrapro-1.10.0.jar`. Requires JDK 21.
+Output: `build/libs/elytrapro-1.11.0.jar`. Requires JDK 21.
 GitHub Actions builds on every push and uploads the JAR as artifact `elytrapro-jar`.
 
 ## Config
 `.minecraft/config/elytrapro.json` (created on first launch; old configs are reset once on update to v1.1.0):
-`autoFirework`, `autoElytra`, `launchFromGround`, `cooldownTicks`, `skipIfBoosting`, `minAirTicks`, `onlyWhenFalling`, `launchInsideCobweb`, `triggerWithBlockInHand`, `triggerBlockTags`, `triggerBlocks`, `fullbright`, `stage1Enabled`, `stage1Range`, `stage1Angle`, `stage1TurnView`, `stage1WaitTicks`, `stage1ReturnSlot`, `debug`.
+`autoFirework`, `autoElytra`, `launchFromGround`, `cooldownTicks`, `skipIfBoosting`, `minAirTicks`, `onlyWhenFalling`, `launchInsideCobweb`, `triggerWithBlockInHand`, `triggerBlockTags`, `triggerBlocks`, `fullbright`, `stage1Enabled`, `debug`.
 
 ## Server rules
 Automation mods may be forbidden on some servers. Check the rules before use.

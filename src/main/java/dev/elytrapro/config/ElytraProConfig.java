@@ -49,18 +49,8 @@ public final class ElytraProConfig {
     public List<String> triggerBlockTags = List.of("minecraft:logs", "minecraft:planks");
     public List<String> triggerBlocks = List.of("minecraft:cobweb", "minecraft:bedrock");
 
-    /** Stage 1 (auto knockback hit while gliding). Toggled with the Stage 1 key (default G). */
+    /** Stage 1: sword hit also uses a Knockback item from the inventory. Toggle key: G. */
     public boolean stage1Enabled = false;
-    /** Max distance (blocks) from your eyes to the target's hitbox. */
-    public double stage1Range = 2.0;
-    /** Max angle (degrees) between your view direction and the target. */
-    public double stage1Angle = 30.0;
-    /** true: your view turns to the target (also steers the flight). false: silent aim, only the hit is aimed. */
-    public boolean stage1TurnView = true;
-    /** Ticks Stage 1 keeps trying after the rocket click (waits for target / attack cooldown). */
-    public int stage1WaitTicks = 14;
-    /** Hotbar slot (1-9) to return to after the hit. 0 = back to the slot you were on. */
-    public int stage1ReturnSlot = 1;
 
     /** Client-side night vision. Toggle key: H (Controls > ElytraPro). */
     public boolean fullbright = true;
@@ -124,9 +114,6 @@ public final class ElytraProConfig {
         }
         cfg.cooldownTicks = Math.max(0, cfg.cooldownTicks);
         cfg.minAirTicks = Math.max(0, cfg.minAirTicks);
-        cfg.stage1WaitTicks = Math.max(0, cfg.stage1WaitTicks);
-        if (cfg.stage1Range <= 0) cfg.stage1Range = 2.0;
-        if (cfg.stage1Angle <= 0) cfg.stage1Angle = 30.0;
         if (cfg.triggerBlockTags == null) cfg.triggerBlockTags = List.of();
         if (cfg.triggerBlocks == null) cfg.triggerBlocks = List.of();
         return cfg;

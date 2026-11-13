@@ -22,8 +22,7 @@ public final class AutoFirework {
     private static final int PENDING_TICKS = 40;
 
     private static long lastUse = Long.MIN_VALUE / 2;
-        private static long lastPlain = Long.MIN_VALUE / 2;
-    private static long boostUntil = Long.MIN_VALUE / 2;
+        private static long boostUntil = Long.MIN_VALUE / 2;
     private static int pending;
 
     private AutoFirework() {}
@@ -32,7 +31,6 @@ public final class AutoFirework {
      * Called when the right-click key is processed. Returns true when the click is consumed by the mod:
      *  - you are inside a cobweb / planks / logs (any crosshair target, block in hand or not), or the crosshair
      *    is on a placed trigger block (logs, planks, cobweb, bedrock);
-     *  - Stage 1 is ON, you are gliding and hold a rocket (plain rocket click, the mod fires it and runs Stage 1).
      * Everything else stays vanilla.
      */
     public static boolean tryUse(MinecraftClient mc) {
@@ -53,19 +51,7 @@ public final class AutoFirework {
                 && cfg.isTriggerBlock(mc.world.getBlockState(hit.getBlockPos()));
         boolean trigger = cfg.autoFirework && (inside || onTriggerBlock);
 
-        if (!trigger) {
-            // plain rocket click while gliding: only Stage 1 takes it over
-            if (gliding && hand != null && Stage1.isEnabled()) {
-                Stage1.preAim(mc, p);
-                if (now - lastPlain >= 4) { // like vanilla's use delay
-                    lastPlain = now;
-                    fire(mc, p, hand, now);
-                }
-                Stage1.trigger(mc, p, hand);
-                return true;
-            }
-            return false;
-        }
+        if (!trigger) return false;
 
         // 2) a block in the main hand outside web/planks => the player wants to place it, stay vanilla
         if (!inside && !cfg.triggerWithBlockInHand && p.getMainHandStack().getItem() instanceof BlockItem) return false;
@@ -79,10 +65,8 @@ public final class AutoFirework {
         // already gliding: fire at once
         if (gliding) {
             boolean boosting = cfg.skipIfBoosting && now < boostUntil;
-            Stage1.preAim(mc, p);
             if (!cooling && !boosting) fire(mc, p, hand, now);
             else dbg(p, cooling ? "cooldown" : "rocket still boosting");
-            Stage1.trigger(mc, p, hand);
             return true;
         }
 
