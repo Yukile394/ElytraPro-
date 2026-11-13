@@ -11,6 +11,7 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -21,49 +22,68 @@ public final class AutoFirework {
     private static final int PENDING_TICKS = 40;
 
     private static long lastUse = Long.MIN_VALUE / 2;
+    private static long lastPlain = Long.MIN_VALUE / 2;
     private static long boostUntil = Long.MIN_VALUE / 2;
     private static int pending;
 
     private AutoFirework() {}
 
     /**
-     * Called when the right-click key is processed. Returns true only when the
-     * click is consumed by the mod. That happens ONLY when you are inside a cobweb
-     * or the crosshair is on an already placed trigger BLOCK (logs, planks, cobweb, bedrock).
-     * Everything else (placing blocks, firework in hand, other blocks) stays vanilla.
+     * Called when the right-click key is processed. Returns true when the click is consumed by the mod:
+     *  - you are inside a cobweb / planks / logs (any crosshair target), or the crosshair is on a placed trigger block;
+     *  - Stage 1 is ON, you are gliding and hold a rocket (plain rocket click, the mod fires it and runs Stage 1).
+     * Everything else stays vanilla.
      */
     public static boolean tryUse(MinecraftClient mc) {
         ClientPlayerEntity p = mc.player;
         ElytraProConfig cfg = ElytraProConfig.get();
-        if (!cfg.autoFirework || p == null || mc.world == null || mc.interactionManager == null) return false;
-        if (p.isSpectator() || p.isSneaking() || p.hasVehicle()) return false;
+        if (p == null || mc.world == null || mc.interactionManager == null) return false;
+        if (p.isSpectator() || p.hasVehicle()) return false;
 
-        // 1) trigger: standing inside a cobweb, OR looking at a placed trigger block
-        boolean inWeb = cfg.launchInsideCobweb && ElytraUtil.inCobweb(p);
+        long now = mc.world.getTime();
+        boolean gliding = p.isFallFlying();
+        Hand hand = findHand(p);
+
+        // 1) trigger: inside cobweb/planks/logs, OR looking at a placed trigger block
+        boolean inside = (cfg.launchInsideCobweb && ElytraUtil.inCobweb(p))
+                || (cfg.launchInsidePlanks && ElytraUtil.insidePhaseBlock(p));
         boolean onTriggerBlock = mc.crosshairTarget instanceof BlockHitResult hit
                 && hit.getType() == HitResult.Type.BLOCK
                 && cfg.isTriggerBlock(mc.world.getBlockState(hit.getBlockPos()));
-        if (!inWeb && !onTriggerBlock) return false;
+        boolean trigger = cfg.autoFirework && !p.isSneaking() && (inside || onTriggerBlock);
+
+        if (!trigger) {
+            // plain rocket click while gliding: only Stage 1 takes it over
+            if (gliding && hand != null && Stage1.isEnabled()) {
+                if (now - lastPlain < 4) return true; // like vanilla's use delay
+                lastPlain = now;
+                fire(mc, p, hand, now);
+                Stage1.trigger(mc, p, hand);
+                return true;
+            }
+            return false;
+        }
 
         // 2) holding a block => the player wants to place it, stay vanilla
         if (!cfg.triggerWithBlockInHand && p.getMainHandStack().getItem() instanceof BlockItem) return false;
 
-        if (!ElytraUtil.hasUsableElytra(p)) return false;
+        if (!ElytraUtil.hasUsableElytra(p)) { dbg(p, "no usable elytra"); return false; }
         // 3) a rocket MUST be in the main hand or off hand (nothing is taken from the hotbar)
-        Hand hand = findHand(p);
-        if (hand == null) return false;
+        if (hand == null) { dbg(p, "no rocket in hand"); return false; }
 
-        long now = mc.world.getTime();
-        if (now - lastUse < cfg.cooldownTicks) return true;
+        boolean cooling = now - lastUse < cfg.cooldownTicks;
 
         // already gliding: fire at once
-        if (p.isFallFlying()) {
-            if (cfg.skipIfBoosting && now < boostUntil) return true;
-            fire(mc, p, hand, now);
+        if (gliding) {
+            boolean boosting = cfg.skipIfBoosting && now < boostUntil;
+            if (!cooling && !boosting) fire(mc, p, hand, now);
+            else dbg(p, cooling ? "cooldown" : "rocket still boosting");
+            Stage1.trigger(mc, p, hand);
             return true;
         }
 
-        if (p.isTouchingWater() || p.hasStatusEffect(StatusEffects.LEVITATION)) return false;
+        if (cooling) return true;
+        if (p.isTouchingWater() || p.hasStatusEffect(StatusEffects.LEVITATION)) { dbg(p, "water / levitation"); return false; }
 
         // on the ground: jump, then open wings + fire when the server will accept it
         if (p.isOnGround()) {
@@ -123,5 +143,9 @@ public final class AutoFirework {
         boostUntil = now + 10L * Math.max(1, flight) + 6;
         ActionResult r = mc.interactionManager.interactItem(p, hand);
         if (r.shouldSwingHand()) p.swingHand(hand);
+    }
+
+    private static void dbg(ClientPlayerEntity p, String why) {
+        if (ElytraProConfig.get().debug) p.sendMessage(Text.literal("[ElytraPro] " + why), true);
     }
 }

@@ -1,6 +1,7 @@
 package dev.elytrapro.util;
 
 import dev.elytrapro.config.ElytraProConfig;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -11,6 +12,10 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.MathHelper;
+
+import java.util.function.Predicate;
 
 public final class ElytraUtil {
     private ElytraUtil() {}
@@ -20,13 +25,27 @@ public final class ElytraUtil {
         return chest.isOf(Items.ELYTRA) && ElytraItem.isUsable(chest);
     }
 
-    /** True if the player's feet/body are inside a cobweb. */
+    /** True if ANY part of the player's hitbox overlaps a cobweb (same rule vanilla uses to slow you down). */
     public static boolean inCobweb(ClientPlayerEntity p) {
+        return anyCell(p, s -> s.isOf(Blocks.COBWEB));
+    }
+
+    /** True if the player's hitbox overlaps a phase block (planks / logs by default). */
+    public static boolean insidePhaseBlock(ClientPlayerEntity p) {
+        return anyCell(p, s -> ElytraProConfig.get().isPhaseBlock(s));
+    }
+
+    private static boolean anyCell(ClientPlayerEntity p, Predicate<BlockState> test) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.world == null) return false;
-        BlockPos pos = p.getBlockPos();
-        return mc.world.getBlockState(pos).isOf(Blocks.COBWEB)
-                || mc.world.getBlockState(pos.up()).isOf(Blocks.COBWEB);
+        Box b = p.getBoundingBox().contract(1.0E-7, 1.0E-7, 1.0E-7);
+        int x0 = MathHelper.floor(b.minX), x1 = MathHelper.floor(b.maxX);
+        int y0 = MathHelper.floor(b.minY), y1 = MathHelper.floor(b.maxY);
+        int z0 = MathHelper.floor(b.minZ), z1 = MathHelper.floor(b.maxZ);
+        for (BlockPos pos : BlockPos.iterate(x0, y0, z0, x1, y1, z1)) {
+            if (test.test(mc.world.getBlockState(pos))) return true;
+        }
+        return false;
     }
 
     /** Same conditions vanilla uses before it sends "start gliding". */
