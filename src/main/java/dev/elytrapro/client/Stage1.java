@@ -14,6 +14,7 @@ import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Box;
@@ -23,10 +24,11 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * Stage 1: while gliding, every rocket click looks for a player right in front of you
- * (within stage1Range, inside a narrow cone). If one is there and a hotbar item has Knockback,
- * it turns toward that player, swaps to the item, hits (as a critical: sprint is cancelled for the hit)
- * and swaps back, all inside the same tick. Not gliding = nothing happens.
- * If the swing is not ready yet (or the player is not in front yet) it keeps trying for stage1WaitTicks.
+ * (within stage1Range, inside a cone). If one is there and ANY item in your inventory (hotbar or bag)
+ * has Knockback, it turns toward that player, brings the item into your hand, hits (as a critical:
+ * sprint is cancelled for the hit) and puts everything back, all inside the same tick.
+ * Not gliding = nothing happens. If the swing is not ready yet (or nobody is in front yet) it keeps
+ * trying for stage1WaitTicks.
  */
 public final class Stage1 {
     private static KeyBinding toggleKey;
@@ -101,8 +103,8 @@ public final class Stage1 {
     private static boolean attempt(MinecraftClient mc, ClientPlayerEntity p, boolean keepSlot) {
         if (mc.currentScreen != null) return true;
         PlayerInventory inv = p.getInventory();
-        int kb = findKnockbackSlot(inv);
-        if (kb < 0) return true; // no knockback item in the hotbar
+        int kb = findKnockbackSlot(inv); // 0-8 hotbar, 9-35 bag
+        if (kb < 0) return true;         // no knockback item anywhere
 
         PlayerEntity target = findTarget(mc, p);
         if (target == null) return false;
@@ -111,6 +113,10 @@ public final class Stage1 {
         ElytraProConfig cfg = ElytraProConfig.get();
         int orig = inv.selectedSlot;
         int back = (keepSlot || cfg.stage1ReturnSlot < 1 || cfg.stage1ReturnSlot > 9) ? orig : cfg.stage1ReturnSlot - 1;
+
+        // item in the bag: swap it into a hotbar slot for the hit (never the slot that holds the rocket)
+        boolean fromBag = kb >= 9;
+        int use = fromBag ? (orig == 8 ? 7 : 8) : kb;
 
         // critical hits need: not sprinting, in the air (gliding counts), full cooldown
         boolean sprint = p.isSprinting();
@@ -131,11 +137,13 @@ public final class Stage1 {
             }
         }
 
-        inv.selectedSlot = kb;
+        if (fromBag) mc.interactionManager.clickSlot(0, kb, use, SlotActionType.SWAP, p);
+        inv.selectedSlot = use;
         mc.interactionManager.attackEntity(p, target); // syncs the new slot, then sends the attack
         p.swingHand(Hand.MAIN_HAND);
+        if (fromBag) mc.interactionManager.clickSlot(0, kb, use, SlotActionType.SWAP, p);
         inv.selectedSlot = back;
-        if (back != kb) {
+        if (back != use) {
             p.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(back));
         }
 
@@ -168,10 +176,11 @@ public final class Stage1 {
         return new float[] {MathHelper.wrapDegrees(yaw), MathHelper.clamp(pitch, -90.0f, 90.0f)};
     }
 
+    /** Selected slot first, then the hotbar, then the bag. -1 = none. */
     private static int findKnockbackSlot(PlayerInventory inv) {
         int cur = inv.selectedSlot;
         if (hasKnockback(inv.getStack(cur))) return cur;
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 36; i++) {
             if (hasKnockback(inv.getStack(i))) return i;
         }
         return -1;

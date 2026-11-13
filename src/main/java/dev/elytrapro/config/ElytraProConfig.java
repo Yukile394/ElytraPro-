@@ -49,20 +49,11 @@ public final class ElytraProConfig {
     public List<String> triggerBlockTags = List.of("minecraft:logs", "minecraft:planks");
     public List<String> triggerBlocks = List.of("minecraft:cobweb", "minecraft:bedrock");
 
-    /** Right click while your body is inside planks/logs also launches you (same as cobweb). */
-    public boolean launchInsidePlanks = true;
-    /** While gliding, the blocks below are not solid for you: you fly straight through them (client side). */
-    public boolean phaseThroughBlocks = true;
-    /** Cobweb does not slow you down while you glide / take off (so the rocket can really launch you out of it). */
-    public boolean ignoreCobweb = true;
-    public List<String> phaseBlockTags = List.of("minecraft:logs", "minecraft:planks");
-    public List<String> phaseBlocks = List.of();
-
-    /** Stage 1 (auto knockback hit while gliding). Toggled with the Stage 1 key. */
+    /** Stage 1 (auto knockback hit while gliding). Toggled with the Stage 1 key (default G). */
     public boolean stage1Enabled = false;
     /** Max distance (blocks) from your eyes to the target's hitbox. */
     public double stage1Range = 2.0;
-    /** Max angle (degrees) between your view direction and the target. Small = only the player right in front. */
+    /** Max angle (degrees) between your view direction and the target. */
     public double stage1Angle = 30.0;
     /** true: your view turns to the target (also steers the flight). false: silent aim, only the hit is aimed. */
     public boolean stage1TurnView = true;
@@ -71,11 +62,13 @@ public final class ElytraProConfig {
     /** Hotbar slot (1-9) to return to after the hit. 0 = back to the slot you were on. */
     public int stage1ReturnSlot = 1;
 
+    /** Client-side night vision. Toggle key: H (Controls > ElytraPro). */
+    public boolean fullbright = true;
+
     /** Shows why a click was ignored (action bar). */
     public boolean debug = false;
 
     private transient Matcher triggerMatcher;
-    private transient Matcher phaseMatcher;
 
     private static final class Matcher {
         final Set<Block> blocks = new HashSet<>();
@@ -131,24 +124,17 @@ public final class ElytraProConfig {
         }
         cfg.cooldownTicks = Math.max(0, cfg.cooldownTicks);
         cfg.minAirTicks = Math.max(0, cfg.minAirTicks);
-        if (cfg.triggerBlockTags == null) cfg.triggerBlockTags = List.of();
-        if (cfg.triggerBlocks == null) cfg.triggerBlocks = List.of();
-        if (cfg.phaseBlockTags == null) cfg.phaseBlockTags = List.of();
-        if (cfg.phaseBlocks == null) cfg.phaseBlocks = List.of();
         cfg.stage1WaitTicks = Math.max(0, cfg.stage1WaitTicks);
         if (cfg.stage1Range <= 0) cfg.stage1Range = 2.0;
         if (cfg.stage1Angle <= 0) cfg.stage1Angle = 30.0;
+        if (cfg.triggerBlockTags == null) cfg.triggerBlockTags = List.of();
+        if (cfg.triggerBlocks == null) cfg.triggerBlocks = List.of();
         return cfg;
     }
 
     public boolean isTriggerBlock(BlockState state) {
         if (triggerMatcher == null) triggerMatcher = new Matcher(triggerBlocks, triggerBlockTags);
         return triggerMatcher.test(state);
-    }
-
-    public boolean isPhaseBlock(BlockState state) {
-        if (phaseMatcher == null) phaseMatcher = new Matcher(phaseBlocks, phaseBlockTags);
-        return phaseMatcher.test(state);
     }
 
     public void save() {

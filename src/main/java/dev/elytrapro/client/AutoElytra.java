@@ -40,7 +40,6 @@ public final class AutoElytra {
         if (!jump || attemptedThisPress) return;
         // Only inside a cobweb. Everywhere else space stays vanilla.
         if (!ElytraUtil.inCobweb(p)) return;
-        Phase.hold(12); // the web must not slow the jump down
         if (airTicks < cfg.minAirTicks) return;
         if (!ElytraUtil.canStartNow(p)) return; // still on the ground: wait inside the same press
 

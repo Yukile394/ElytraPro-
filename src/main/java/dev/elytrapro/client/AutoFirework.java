@@ -22,7 +22,7 @@ public final class AutoFirework {
     private static final int PENDING_TICKS = 40;
 
     private static long lastUse = Long.MIN_VALUE / 2;
-    private static long lastPlain = Long.MIN_VALUE / 2;
+        private static long lastPlain = Long.MIN_VALUE / 2;
     private static long boostUntil = Long.MIN_VALUE / 2;
     private static int pending;
 
@@ -31,7 +31,7 @@ public final class AutoFirework {
     /**
      * Called when the right-click key is processed. Returns true when the click is consumed by the mod:
      *  - you are inside a cobweb / planks / logs (any crosshair target, block in hand or not), or the crosshair
-     *    is on a placed trigger block;
+     *    is on a placed trigger block (logs, planks, cobweb, bedrock);
      *  - Stage 1 is ON, you are gliding and hold a rocket (plain rocket click, the mod fires it and runs Stage 1).
      * Everything else stays vanilla.
      */
@@ -45,9 +45,8 @@ public final class AutoFirework {
         boolean gliding = p.isFallFlying();
         Hand hand = findHand(p);
 
-        // 1) trigger: inside cobweb/planks/logs (always), OR looking at a placed trigger block (not while sneaking)
-        boolean inside = (cfg.launchInsideCobweb && ElytraUtil.inCobweb(p))
-                || (cfg.launchInsidePlanks && ElytraUtil.insidePhaseBlock(p));
+        // 1) trigger: inside a cobweb (always), OR looking at a placed trigger block (not while sneaking)
+        boolean inside = cfg.launchInsideCobweb && ElytraUtil.inCobweb(p);
         boolean onTriggerBlock = !inside && !p.isSneaking()
                 && mc.crosshairTarget instanceof BlockHitResult hit
                 && hit.getType() == HitResult.Type.BLOCK
@@ -98,13 +97,11 @@ public final class AutoFirework {
             if (boost != null) jump += 0.1 * (boost.getAmplifier() + 1);
             Vec3d v = p.getVelocity();
             p.setVelocity(v.x, Math.max(v.y, jump), v.z);
-            Phase.hold(12); // web / planks must not hold the take-off back
             pending = PENDING_TICKS;
             return true;
         }
 
         // in the air: open wings and fire in the same tick
-        Phase.hold(12);
         if (ElytraUtil.canStartNow(p)) {
             if (ElytraUtil.tryStartGliding(p)) fire(mc, p, hand, now);
             return true;

@@ -5,9 +5,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,18 +27,3 @@ jobs:
             build/libs/*.jar
             !build/libs/*-sources.jar
           if-no-files-found: error
-      - name: Move latest tag
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        run: |
-          git tag -f latest
-          git push -f origin latest
-      - name: Publish release
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: ElytraPro (latest)
-          body: Otomatik derleme. Son commit ${{ github.sha }}
-          files: |
-            build/libs/*.jar
-          make_latest: true

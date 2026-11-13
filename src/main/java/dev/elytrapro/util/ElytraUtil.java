@@ -30,11 +30,6 @@ public final class ElytraUtil {
         return anyCell(p, s -> s.isOf(Blocks.COBWEB));
     }
 
-    /** True if the player's hitbox overlaps a phase block (planks / logs by default). */
-    public static boolean insidePhaseBlock(ClientPlayerEntity p) {
-        return anyCell(p, s -> ElytraProConfig.get().isPhaseBlock(s));
-    }
-
     private static boolean anyCell(ClientPlayerEntity p, Predicate<BlockState> test) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.world == null) return false;
