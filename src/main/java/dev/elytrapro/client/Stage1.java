@@ -11,28 +11,22 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.EntityHitResult;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Stage 1 (toggle key, default G).
- * ON + a sword in your selected slot + a hit: the hit is made with the sword's damage and cooldown AND the
- * Knockback enchantment of another item/block from your inventory. The selected slot never changes: the
- * knockback item is swapped into the sword's slot with inventory packets and back, all inside the same tick.
- * The hit always waits for the sword's full cooldown (a click before that is queued for a few ticks).
+ * Stage 1 (toggle key, default G). Items are NEVER moved: only the selected hotbar slot changes.
+ *  - hit with the sword            -> the next slot is the first hotbar slot that holds a Knockback item
+ *  - hit with the Knockback item   -> back to slot 1
+ * So the hits alternate sword / knockback / sword / ... The switch is sent in the same tick as the hit.
  */
 public final class Stage1 {
-    private static final float READY = 1.0f;  // sword cooldown that must be reached
-    private static final int WAIT_TICKS = 12; // how long an early click stays queued
+    private static final int HOME_SLOT = 0; // slot 1
 
     private static KeyBinding toggleKey;
-    private static boolean busy;
-    private static int pending;
 
     private Stage1() {}
 
@@ -45,84 +39,46 @@ public final class Stage1 {
         return ElytraProConfig.get().stage1Enabled;
     }
 
-    /** Client tick: toggle key + fires a queued hit as soon as the sword is ready. */
+    /** Client tick: only the toggle key. */
     public static void tick(MinecraftClient mc) {
+        if (toggleKey == null) return;
         ClientPlayerEntity p = mc.player;
-        if (toggleKey != null) {
-            while (toggleKey.wasPressed()) {
-                ElytraProConfig cfg = ElytraProConfig.get();
-                cfg.stage1Enabled = !cfg.stage1Enabled;
-                cfg.save();
-                pending = 0;
-                if (p != null) {
-                    p.sendMessage(Text.literal("ElytraPro Aşama 1: " + (cfg.stage1Enabled ? "AÇIK" : "KAPALI")), true);
-                }
+        while (toggleKey.wasPressed()) {
+            ElytraProConfig cfg = ElytraProConfig.get();
+            cfg.stage1Enabled = !cfg.stage1Enabled;
+            cfg.save();
+            if (p != null) {
+                p.sendMessage(Text.literal("ElytraPro Aşama 1: " + (cfg.stage1Enabled ? "AÇIK" : "KAPALI")), true);
             }
         }
-        if (pending <= 0) return;
-        if (p == null || mc.world == null || mc.interactionManager == null || mc.currentScreen != null
-                || !isEnabled() || !isPlainSword(p.getMainHandStack())) {
-            pending = 0;
+    }
+
+    /** Called right after the client attacked an entity (the attack itself is untouched). */
+    public static void afterAttack(MinecraftClient mc, Entity target) {
+        ClientPlayerEntity p = mc.player;
+        if (p == null || !isEnabled() || !(target instanceof LivingEntity)) return;
+
+        PlayerInventory inv = p.getInventory();
+        int cur = inv.selectedSlot;
+        ItemStack held = inv.getStack(cur);
+
+        int next;
+        if (hasKnockback(held)) {
+            next = HOME_SLOT;                       // knockback hit done -> slot 1
+        } else if (held.isIn(ItemTags.SWORDS)) {
+            next = findKnockbackHotbarSlot(inv, cur); // sword hit done -> knockback slot
+        } else {
             return;
         }
-        pending--;
-        if (!(mc.crosshairTarget instanceof EntityHitResult hit)
-                || !(hit.getEntity() instanceof LivingEntity target) || !target.isAlive()) {
-            return; // keep waiting until the crosshair is on a target again
-        }
-        if (p.getAttackCooldownProgress(0.5f) < READY) return;
-        int slotId = findKnockbackSlotId(p.getInventory());
-        if (slotId < 0) { pending = 0; return; }
-        pending = 0;
-        combinedHit(mc, p, target, slotId);
-        p.swingHand(Hand.MAIN_HAND);
+        if (next < 0 || next == cur) return;
+
+        inv.selectedSlot = next;
+        p.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(next));
     }
 
-    /**
-     * Called by the attack hook (every client attack on an entity).
-     * @return true when the attack was handled here and the vanilla one must be skipped.
-     */
-    public static boolean onAttack(MinecraftClient mc, Entity target) {
-        ClientPlayerEntity p = mc.player;
-        if (busy || p == null || mc.interactionManager == null || !isEnabled()) return false;
-        if (!(target instanceof LivingEntity)) return false;
-        if (!isPlainSword(p.getMainHandStack())) return false;
-        int slotId = findKnockbackSlotId(p.getInventory());
-        if (slotId < 0) return false;
-
-        if (p.getAttackCooldownProgress(0.5f) < READY) {
-            pending = WAIT_TICKS; // early click: wait for the sword's cooldown, then hit
-            return true;
-        }
-        pending = 0;
-        combinedHit(mc, p, target, slotId);
-        return true; // vanilla still plays the swing animation after this
-    }
-
-    /** swap in, hit, swap back: same tick, same selected slot. */
-    private static void combinedHit(MinecraftClient mc, ClientPlayerEntity p, Entity target, int slotId) {
-        int selected = p.getInventory().selectedSlot;
-        busy = true;
-        try {
-            mc.interactionManager.clickSlot(0, slotId, selected, SlotActionType.SWAP, p);
-            mc.interactionManager.attackEntity(p, target);
-            mc.interactionManager.clickSlot(0, slotId, selected, SlotActionType.SWAP, p);
-        } finally {
-            busy = false;
-        }
-    }
-
-    /** A sword that has no Knockback itself (if it has, the vanilla hit already does everything). */
-    private static boolean isPlainSword(ItemStack stack) {
-        return stack.isIn(ItemTags.SWORDS) && !hasKnockback(stack);
-    }
-
-    /** Screen-handler slot id of the first item with Knockback (hotbar first, then the bag), skipping the held slot. */
-    private static int findKnockbackSlotId(PlayerInventory inv) {
-        int selected = inv.selectedSlot;
-        for (int i = 0; i < 36; i++) {
-            if (i == selected) continue;
-            if (hasKnockback(inv.getStack(i))) return i < 9 ? 36 + i : i;
+    private static int findKnockbackHotbarSlot(PlayerInventory inv, int skip) {
+        for (int i = 0; i < 9; i++) {
+            if (i != skip && hasKnockback(inv.getStack(i))) return i;
         }
         return -1;
     }

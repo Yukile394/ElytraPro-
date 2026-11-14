@@ -14,11 +14,10 @@ Client-side **Fabric** mod for **Minecraft 1.21 and 1.21.1**. Java 21.
 - Everywhere else space is completely vanilla.
 - The server can still close wings (ground contact, water, anti-cheat). The client cannot override that.
 
-**Stage 1 (v1.11.0)**
+**Stage 1 (v1.12.0)**
 - Key `G` (Controls > ElytraPro) toggles it. Saved in `stage1Enabled`.
-- ON + a sword in the selected slot + a hit on a living entity: the hit uses the sword's damage and cooldown plus the Knockback enchantment of another item/block in your inventory. The selected slot never changes: the item is swapped into the sword's slot with inventory packets and back in the same tick.
-- It always waits for the sword's full cooldown: an early click is queued for about 0.6 s and fires when the sword is ready and the crosshair is on a target.
-- A sword that already has Knockback is left alone (normal hit).
+- Items are never moved, only the selected hotbar slot changes, in the same tick as the hit: after a sword hit it selects the first hotbar slot with a Knockback item; after a hit with the Knockback item it selects slot 1. Loops: sword, knockback, sword, ...
+- The Knockback item must be in the hotbar (a slot can only be selected, not an item from the bag).
 
 **Fullbright (v1.9.0)**
 - Client-side night vision, ON by default. Key `H` toggles it (Controls > ElytraPro), saved in `fullbright`.
@@ -32,7 +31,7 @@ Client-side **Fabric** mod for **Minecraft 1.21 and 1.21.1**. Java 21.
 gradle wrapper --gradle-version 8.10.2   # once, creates gradle-wrapper.jar
 ./gradlew build                        # Windows: gradlew.bat build
 ```
-Output: `build/libs/elytrapro-1.11.0.jar`. Requires JDK 21.
+Output: `build/libs/elytrapro-1.12.0.jar`. Requires JDK 21.
 GitHub Actions builds on every push and uploads the JAR as artifact `elytrapro-jar`.
 
 ## Config

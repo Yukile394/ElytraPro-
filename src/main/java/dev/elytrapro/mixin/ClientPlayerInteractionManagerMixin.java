@@ -12,10 +12,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPlayerInteractionManager.class)
 public abstract class ClientPlayerInteractionManagerMixin {
-    @Inject(method = "attackEntity", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "attackEntity", at = @At("RETURN"))
     private void elytrapro$stage1(PlayerEntity player, Entity target, CallbackInfo ci) {
-        if (Stage1.onAttack(MinecraftClient.getInstance(), target)) {
-            ci.cancel();
-        }
+        Stage1.afterAttack(MinecraftClient.getInstance(), target);
     }
 }
